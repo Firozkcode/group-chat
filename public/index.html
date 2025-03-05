@@ -3,32 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
+    <title>Secure Chat App</title>
+    <link rel="stylesheet" href="style.css">
+    <script type='module' src='https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js'></script>
+    <script nomodule src='https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js'></script>
+    
 </head>
 <body>
-    <h1>Chatting</h1>
-    <input type="text" id="message" placeholder="Enter Message">
-    <button id="sendBtn">Send</button>
+    <h1>Chat Room</h1>
+    <div id="login">
+        <input type="text" id="username" placeholder="Enter your name">
+        <input type="password" id="roomKey" placeholder="Enter room key">
+        <button id="joinBtn">Join Chat</button>
+    </div>
 
-    <div id="messages"></div>
+    <div id="chatroom" style="display: none;">
+        <div class="profile">
+            <div id="user-name">User Name</div>
+        </div>
+        <div class="send-feild">
+            <input type="text" id="message" placeholder="Enter Message">
+            <button id="sendBtn"><ion-icon name="send"></ion-icon></button>
+        </div>
+        <div id="messages"></div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        const joinBtn = document.getElementById("joinBtn");
+        const usernameInput = document.getElementById("username");
+        const roomKeyInput = document.getElementById("roomKey");
+        const loginDiv = document.getElementById("login");
+        const chatroomDiv = document.getElementById("chatroom");
+        const userName = document.getElementById("user-name");
+        let currentUserName = ""; // Store the user's name globally
+
+        joinBtn.addEventListener("click", () => {
+                currentUserName = usernameInput.value.trim();
+                const key = roomKeyInput.value.trim();
+
+                if (currentUserName && key) {
+                    socket.emit("join-room", { name: currentUserName, key });
+                }
+            });
+
+            socket.on("access-granted", () => {
+                loginDiv.style.display = "none";
+                chatroomDiv.style.display = "flex";
+                userName.textContent = `Me: ${currentUserName}`; // Set the username after access is granted
+            });
+
+            socket.on("access-denied", (message) => {
+                alert(message);
+            });
+
         const sendBtn = document.getElementById("sendBtn");
         const messageInput = document.getElementById("message");
-        const allMessages = document.getElementById("messages")
+        const allMessages = document.getElementById("messages");
 
-        socket.on('message', (message) => {
+        socket.on("message", (data) => {
             const p = document.createElement("p");
-            p.innerText = message;
-            allMessages.appendChild(p)
+
+            if (data.type === "connect") {
+                p.innerText = data.message;
+                p.classList.add("connect");
+            } else {
+                p.innerText = `${data.sender}: ${data.message}`;
+
+                if (data.senderId === socket.id) {
+                    p.classList.add("sender");
+                } else {
+                    p.classList.add("receiver");
+                }
+            }
+
+            allMessages.appendChild(p);
         });
 
-        sendBtn.addEventListener("click", (e) => {
-            const message = messageInput.value;
-            // console.log(message);
-            socket.emit('user-message', message)
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit("user-message", message);
+                messageInput.value = "";
+            }
+        }
+
+        sendBtn.addEventListener("click", sendMessage);
+        messageInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
+            }
         });
     </script>
 </body>
