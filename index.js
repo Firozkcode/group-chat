@@ -1,28 +1,15 @@
 const http = require("http");
 const express = require("express");
 const path = require('path');
-const ServerlessHttp = require('serverless-http');
-const app = express();
+// const serverless = require('serverless-http');
 
 const { Server } = require("socket.io");
 
-app.get('/.netlify/functions/api', (req, res)=> {
-    return res.json({
-        message: 'Hello from Express'
-    })
-})
-
-const handler = ServerlessHttp(app);
+const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server);
 
 const PORT = process.env.PORT || 9000;
-
-module.exports.handler = async(event, context) =>{
-    const result = await handler(event, context);
-    return result
-}
 
 
 //handle socket.io connection here
